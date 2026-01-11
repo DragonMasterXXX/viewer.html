@@ -2,8 +2,8 @@
 <html>
 <head>
     <title>Official Content Page</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body class="victim-body">
     <div id="main-content">
@@ -11,34 +11,37 @@
         <p>Browsing content... please wait.</p>
     </div>
 
-    <!-- This only appears when admin controls mouse -->
+    <!-- Resized and specifically positioned icons -->
     <div id="victim-desktop" style="display:none;">
-        <img id="v-file" src="images/file.png" style="width:64px; position:absolute; top:20%; left:10%;">
+        <img id="v-file" src="./images/file.png" style="width:40px; position:absolute; top:20px; left:20px; transition: all 1s ease;">
+        <img id="v-bin" src="./images/bin.png" style="width:40px; position:absolute; bottom:20px; right:20px;">
     </div>
 
     <div id="alert-overlay">
         <h1 id="alert-msg"></h1>
     </div>
 
-    <img id="fake-cursor" src="https://cur.cursors-4u.net/arrow/arrow-1.png">
+    <img id="fake-cursor" src="https://cur.cursors-4u.net/arrow/arrow-1.png" style="position:fixed; display:none; width:20px; z-index:10001; pointer-events:none;">
 
     <script>
-        const socket = io();
+        // REPLACE THE URL BELOW WITH YOUR HOSTED BACKEND
+        const socket = io('https://your-back-end-service.onrender.com'); 
         socket.emit('join', 'viewer');
 
         const overlay = document.getElementById('alert-overlay');
         const desktop = document.getElementById('victim-desktop');
         const cursor = document.getElementById('fake-cursor');
+        const fileIcon = document.getElementById('v-file');
 
         socket.on('exec-prank', (data) => {
-            if (data.type === 'custom' || data.type === 'red' || data.type === 'windows') {
+            if (['custom', 'red', 'windows'].includes(data.type)) {
                 overlay.style.display = 'block';
                 if(data.type === 'red') {
                     overlay.className = 'red-screen';
                     document.getElementById('alert-msg').innerText = "CRITICAL MALWARE DETECTED!";
                 } else if (data.type === 'windows') {
                     overlay.className = 'blue-screen';
-                    document.getElementById('alert-msg').innerHTML = "Updating Windows...<br>99% Complete<br>Keep your PC plugged in.";
+                    document.getElementById('alert-msg').innerHTML = "Updating Windows...<br>99% Complete";
                 } else {
                     overlay.className = 'blue-screen';
                     document.getElementById('alert-msg').innerText = data.msg;
@@ -49,7 +52,10 @@
                 desktop.style.display = data.active ? 'block' : 'none';
                 cursor.style.display = data.active ? 'block' : 'none';
             } else if (data.type === 'delete-files') {
-                document.getElementById('v-file').style.display = 'none';
+                // Animation: File slides to the bin and fades out
+                fileIcon.style.top = "calc(100% - 60px)";
+                fileIcon.style.left = "calc(100% - 60px)";
+                fileIcon.style.opacity = "0";
             }
         });
 
