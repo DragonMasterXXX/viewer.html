@@ -1,37 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Official Content Page</title>
+  <title>Official Content</title>
   <style>
-    body { margin:0; font-family:Segoe UI,sans-serif; height:100vh; background:#fff; position:relative; }
-    
-    /* Windows-style alert overlay */
-    #alert-overlay {
+    body { margin:0; font-family:Segoe UI,sans-serif; height:100vh; }
+
+    /* Overlay */
+    #overlay {
       display:none;
       position:fixed;
       inset:0;
-      background:#0078d7;
+      background:rgba(0,0,0,0.25);
       z-index:9999;
       display:flex;
       align-items:center;
       justify-content:center;
     }
-    .windows-box {
+
+    /* Windows Update box */
+    .win-update {
       background:#0078d7;
       color:white;
       width:420px;
       padding:30px;
-      border-radius:4px;
-      box-shadow:0 0 40px rgba(0,0,0,0.6);
       text-align:center;
     }
-    .win-title { font-size:18px; margin-bottom:15px; }
-    .win-body { font-size:15px; }
-    .spinner { margin:20px auto 0; width:30px; height:30px; border:4px solid rgba(255,255,255,0.4); border-top:4px solid white; border-radius:50%; animation:spin 1s linear infinite; }
+
+    .spinner {
+      margin:20px auto 0;
+      width:30px;
+      height:30px;
+      border:4px solid rgba(255,255,255,.4);
+      border-top:4px solid white;
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* Draggable icons */
-    .file-icon { width:40px; position:absolute; user-select:none; cursor:pointer; display:none; }
+    /* Windows error dialog */
+    .win-error {
+      background:#f2f2f2;
+      color:#000;
+      width:380px;
+      border:1px solid #aaa;
+      box-shadow:0 0 20px rgba(0,0,0,.4);
+    }
+    .error-title {
+      background:#e5e5e5;
+      padding:8px;
+      font-weight:600;
+      border-bottom:1px solid #ccc;
+    }
+    .error-body {
+      padding:20px;
+      display:flex;
+      gap:15px;
+      align-items:flex-start;
+    }
+    .error-body img {
+      width:32px;
+    }
+    .error-btn {
+      text-align:right;
+      padding:10px;
+    }
+    .error-btn button {
+      padding:6px 20px;
+    }
+
+    /* Icons */
+    .icon { width:40px; position:absolute; display:none; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -39,112 +78,74 @@
 <h1>Welcome</h1>
 <p>Browsing content...</p>
 
-<!-- Windows-style alert -->
-<div id="alert-overlay">
-  <div class="windows-box">
-    <div class="win-title">Windows System Message</div>
-    <div class="win-body" id="alert-msg">Loading...</div>
-    <div class="spinner" id="spinner"></div>
-  </div>
-</div>
+<div id="overlay"></div>
 
-<!-- File and Bin icons -->
-<img src="images/file.png" id="viewer-file" class="file-icon">
-<img src="images/bin.png" id="viewer-bin" class="file-icon">
+<img src="images/file.png" id="file" class="icon">
+<img src="images/bin.png" id="bin" class="icon">
 
 <script>
-const overlay = document.getElementById("alert-overlay");
-const alertMsg = document.getElementById("alert-msg");
-const spinner = document.getElementById("spinner");
-const fileIcon = document.getElementById("viewer-file");
-const binIcon = document.getElementById("viewer-bin");
+const overlay = document.getElementById("overlay");
+const file = document.getElementById("file");
+const bin = document.getElementById("bin");
 
-let lastTime = 0;
-
-// ------------------- Fake Alerts & File Appearance -------------------
-function updateViewerState(state){ 
-  localStorage.setItem("viewerState", JSON.stringify({state,time:Date.now()}));
-}
+let last = 0;
 
 setInterval(()=>{
   const cmd = JSON.parse(localStorage.getItem("latestPrank"));
-  if(!cmd || cmd.time===lastTime) return;
-  lastTime = cmd.time;
+  if(!cmd || cmd.time===last) return;
+  last = cmd.time;
 
-  // ALERTS
-  if(cmd.type==="windows" || cmd.type==="custom"){
+  overlay.innerHTML="";
+  overlay.style.display="none";
+
+  if(cmd.type==="windows"){
     overlay.style.display="flex";
-    alertMsg.innerText = cmd.type==="custom" ? cmd.msg : "Updating Windows (99%)";
-    spinner.style.display = cmd.type==="custom" ? "none" : "block";
-    updateViewerState("windows");
+    overlay.innerHTML = `
+      <div class="win-update">
+        <h3>Working on updates</h3>
+        <p>Don't turn off your PC</p>
+        <div class="spinner"></div>
+      </div>`;
   }
-  if(cmd.type==="red"){
+
+  if(cmd.type==="custom"){
     overlay.style.display="flex";
-    alertMsg.innerText="Security threat detected.";
-    spinner.style.display="block";
-    updateViewerState("red");
+    overlay.innerHTML = `
+      <div class="win-update">
+        <h3>${cmd.msg || "Processing..."}</h3>
+      </div>`;
   }
+
+  if(cmd.type==="fake-error"){
+    overlay.style.display="flex";
+    overlay.innerHTML = `
+      <div class="win-error">
+        <div class="error-title">System Error</div>
+        <div class="error-body">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Windows_error_icon.png">
+          <div>${cmd.msg || "An unexpected error has occurred."}</div>
+        </div>
+        <div class="error-btn">
+          <button onclick="overlay.style.display='none'">OK</button>
+        </div>
+      </div>`;
+  }
+
+  if(cmd.type==="delete-files"){
+    file.style.display="block";
+    bin.style.display="block";
+    file.style.top="20px";
+    file.style.left="20px";
+    bin.style.bottom="20px";
+    bin.style.right="20px";
+  }
+
   if(cmd.type==="clear"){
     overlay.style.display="none";
-    spinner.style.display="block";
-    fileIcon.style.display="none";
-    binIcon.style.display="none";
-    updateViewerState("clear");
+    file.style.display="none";
+    bin.style.display="none";
   }
-
-  // DELETE FILES BUTTON
-  if(cmd.type==="delete-files"){
-    overlay.style.display="flex";
-    alertMsg.innerText="Deleting files..."; // fake message
-    spinner.style.display="block";
-    fileIcon.style.display="block";
-    binIcon.style.display="block";
-
-    // Initialize positions
-    if(!fileIcon.style.top) fileIcon.style.top="20px";
-    if(!fileIcon.style.left) fileIcon.style.left="20px";
-    if(!binIcon.style.top) binIcon.style.top=(window.innerHeight-60)+"px";
-    if(!binIcon.style.left) binIcon.style.left=(window.innerWidth-60)+"px";
-
-    updateViewerState("windows");
-  }
-
 },500);
-
-// ------------------- Drag file into bin -------------------
-let dragging = false;
-let offsetX=0, offsetY=0;
-
-fileIcon.onmousedown = function(e){
-  dragging=true;
-  offsetX = e.clientX - fileIcon.offsetLeft;
-  offsetY = e.clientY - fileIcon.offsetTop;
-};
-
-document.onmouseup = function(){
-  if(dragging){
-    dragging=false;
-    // Collision check with bin
-    const fileRect = fileIcon.getBoundingClientRect();
-    const binRect = binIcon.getBoundingClientRect();
-    if(fileRect.left < binRect.right &&
-       fileRect.right > binRect.left &&
-       fileRect.top < binRect.bottom &&
-       fileRect.bottom > binRect.top){
-         fileIcon.style.display="none"; // file disappears
-       }
-  }
-};
-
-document.onmousemove = function(e){
-  if(dragging){
-    fileIcon.style.left = (e.clientX - offsetX)+"px";
-    fileIcon.style.top = (e.clientY - offsetY)+"px";
-  }
-};
-
-// ------------------- Initialize -------------------
-updateViewerState("clear");
 </script>
 
 </body>
