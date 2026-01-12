@@ -4,7 +4,6 @@
   <title>Official Content Page</title>
   <style>
     body { margin:0; font-family:Segoe UI,sans-serif; height:100vh; background:#fff; position:relative; }
-
     #alert-overlay {
       display:none;
       position:fixed;
@@ -15,7 +14,6 @@
       align-items:center;
       justify-content:center;
     }
-
     .windows-box {
       background:#0078d7;
       color:white;
@@ -30,8 +28,8 @@
     .spinner { margin:20px auto 0; width:30px; height:30px; border:4px solid rgba(255,255,255,0.4); border-top:4px solid white; border-radius:50%; animation:spin 1s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* Fake file icons */
-    .file-icon { width:40px; position:absolute; user-select:none; }
+    /* Draggable icons */
+    .file-icon { width:40px; position:absolute; user-select:none; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -51,23 +49,26 @@
 <img src="images/bin.png" id="viewer-bin" class="file-icon" style="bottom:20px; right:20px;">
 
 <script>
-const overlay=document.getElementById("alert-overlay");
-const alertMsg=document.getElementById("alert-msg");
-const fileIcon=document.getElementById("viewer-file");
-const binIcon=document.getElementById("viewer-bin");
-let lastTime=0;
+const overlay = document.getElementById("alert-overlay");
+const alertMsg = document.getElementById("alert-msg");
+const fileIcon = document.getElementById("viewer-file");
+const binIcon = document.getElementById("viewer-bin");
 
-function updateViewerState(state){localStorage.setItem("viewerState",JSON.stringify({state,time:Date.now()}));}
+let lastTime = 0;
+
+// ------------------- Fake Alerts -------------------
+function updateViewerState(state) {
+  localStorage.setItem("viewerState", JSON.stringify({state, time:Date.now()}));
+}
 
 setInterval(()=>{
-  const cmd=JSON.parse(localStorage.getItem("latestPrank"));
-  if(!cmd||cmd.time===lastTime) return;
-  lastTime=cmd.time;
+  const cmd = JSON.parse(localStorage.getItem("latestPrank"));
+  if(!cmd || cmd.time===lastTime) return;
+  lastTime = cmd.time;
 
-  // Handle alerts
-  if(cmd.type==="windows"||cmd.type==="custom"){
-    overlay.style.display="flex";
-    alertMsg.innerText=cmd.msg||"Updating Windows (99%)";
+  if(cmd.type==="windows" || cmd.type==="custom"){
+    overlay.style.display = "flex";
+    alertMsg.innerText = cmd.msg || "Updating Windows (99%)";
     updateViewerState("windows");
   }
   if(cmd.type==="red"){
@@ -80,17 +81,52 @@ setInterval(()=>{
     updateViewerState("clear");
   }
 
-  // Handle fake files
   if(cmd.type==="delete-files"){
-    const pos=JSON.parse(localStorage.getItem("filePositions"))||{};
-    if(pos.file){fileIcon.style.top=pos.file.top; fileIcon.style.left=pos.file.left;}
-    if(pos.bin){binIcon.style.top=pos.bin.top; binIcon.style.left=pos.bin.left;}
+    // Reset file and bin positions based on admin
+    const pos = JSON.parse(localStorage.getItem("filePositions")) || {};
+    if(pos.file){ fileIcon.style.top = pos.file.top; fileIcon.style.left = pos.file.left; fileIcon.style.display="block"; }
+    if(pos.bin){ binIcon.style.top = pos.bin.top; binIcon.style.left = pos.bin.left; }
     updateViewerState("windows");
   }
-
 },500);
 
-// Initialize
+// ------------------- Drag file to bin -------------------
+let dragging = false;
+let offsetX=0, offsetY=0;
+
+fileIcon.onmousedown = function(e){
+  dragging=true;
+  offsetX = e.clientX - fileIcon.offsetLeft;
+  offsetY = e.clientY - fileIcon.offsetTop;
+}
+
+document.onmouseup = function(){
+  if(dragging){
+    dragging=false;
+    // Check collision with bin
+    const fileRect = fileIcon.getBoundingClientRect();
+    const binRect = binIcon.getBoundingClientRect();
+
+    if(
+      fileRect.left < binRect.right &&
+      fileRect.right > binRect.left &&
+      fileRect.top < binRect.bottom &&
+      fileRect.bottom > binRect.top
+    ){
+      // File "deleted"
+      fileIcon.style.display="none";
+    }
+  }
+}
+
+document.onmousemove = function(e){
+  if(dragging){
+    fileIcon.style.left = (e.clientX - offsetX) + "px";
+    fileIcon.style.top = (e.clientY - offsetY) + "px";
+  }
+}
+
+// Initialize state
 updateViewerState("clear");
 </script>
 
