@@ -22,47 +22,61 @@
     </div>
     <div id="alert-overlay"><h1 id="alert-msg"></h1></div>
     <img id="fake-cursor" src="https://cur.cursors-4u.net/arrow/arrow-1.png">
-
     <script>
-        const socket = io(); // Replace with Render URL later
-        socket.emit('join', 'viewer');
+const overlay = document.getElementById('alert-overlay');
+const desktop = document.getElementById('victim-desktop');
+const cursor = document.getElementById('fake-cursor');
+const fileIcon = document.getElementById('v-file');
 
-        // Report to admin that someone is watching
-        socket.emit('viewer-update', { status: 'clear' });
+let lastCommandTime = 0;
 
-        const overlay = document.getElementById('alert-overlay');
-        const desktop = document.getElementById('victim-desktop');
-        const cursor = document.getElementById('fake-cursor');
-        const fileIcon = document.getElementById('v-file');
+// Viewer reports status
+function updateViewerState(state) {
+  localStorage.setItem("viewerState", JSON.stringify({
+    state,
+    time: Date.now()
+  }));
+}
 
-        socket.on('exec-prank', (data) => {
-            if (['custom', 'red', 'windows'].includes(data.type)) {
-                overlay.style.display = 'block';
-                socket.emit('viewer-update', { status: data.type }); // Tell admin
-                if(data.type === 'red') {
-                    overlay.className = 'red-screen';
-                    document.getElementById('alert-msg').innerText = "MALWARE DETECTED!";
-                } else {
-                    overlay.className = 'blue-screen';
-                    document.getElementById('alert-msg').innerText = "Updating Windows (99%)";
-                }
-            } else if (data.type === 'clear') {
-                overlay.style.display = 'none';
-                socket.emit('viewer-update', { status: 'clear' });
-            } else if (data.type === 'set-mouse-state') {
-                desktop.style.display = data.active ? 'block' : 'none';
-                cursor.style.display = data.active ? 'block' : 'none';
-            } else if (data.type === 'delete-files') {
-                fileIcon.style.top = (window.innerHeight - 60) + "px";
-                fileIcon.style.left = (window.innerWidth - 60) + "px";
-                fileIcon.style.opacity = "0";
-            }
-        });
+// Poll for admin commands
+setInterval(() => {
+  const cmd = JSON.parse(localStorage.getItem("latestPrank"));
+  if (!cmd || cmd.time === lastCommandTime) return;
 
-        socket.on('mouse-sync', (coords) => {
-            cursor.style.left = coords.x + 'px';
-            cursor.style.top = coords.y + 'px';
-        });
-    </script>
+  lastCommandTime = cmd.time;
+
+  if (cmd.type === 'red') {
+    overlay.style.display = 'block';
+    overlay.className = 'red-screen';
+    document.getElementById('alert-msg').innerText = "MALWARE DETECTED!";
+    updateViewerState('red');
+
+  } else if (cmd.type === 'windows') {
+    overlay.style.display = 'block';
+    overlay.className = 'blue-screen';
+    document.getElementById('alert-msg').innerText = "Updating Windows (99%)";
+    updateViewerState('windows');
+
+  } else if (cmd.type === 'clear') {
+    overlay.style.display = 'none';
+    updateViewerState('clear');
+
+  } else if (cmd.type === 'set-mouse-state') {
+    desktop.style.display = cmd.active ? 'block' : 'none';
+    cursor.style.display = cmd.active ? 'block' : 'none';
+    updateViewerState(cmd.active ? 'desktop' : 'clear');
+
+  } else if (cmd.type === 'delete-files') {
+    fileIcon.style.top = (window.innerHeight - 60) + "px";
+    fileIcon.style.left = (window.innerWidth - 60) + "px";
+    fileIcon.style.opacity = "0";
+    updateViewerState('red');
+  }
+
+}, 500);
+
+// Initial state
+updateViewerState('clear');
+</script>
 </body>
 </html>
