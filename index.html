@@ -4,42 +4,31 @@
     <title>Official Content Page</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        body.victim-body { margin: 0; padding: 20px; font-family: sans-serif; background: #fff; overflow: hidden; }
-        #alert-overlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 10000; text-align: center; padding-top: 25vh; 
-        }
-        .blue-screen { background: #0078d7; color: white; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; padding: 20px; font-family: sans-serif; background: #fff; overflow: hidden; height: 100vh; }
+        #alert-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; text-align: center; padding-top: 25vh; }
+        .blue-screen { background: #0078d7; color: white; }
         .red-screen { background: #aa0000; color: white; }
-        
         #fake-cursor { position: fixed; display: none; width: 22px; pointer-events: none; z-index: 10001; }
-        
-        /* Victim Desktop Icons */
-        #v-file { position: absolute; top: 20px; left: 20px; width: 40px; }
+        #v-file { position: absolute; top: 20px; left: 20px; width: 40px; transition: all 0.8s ease-in; }
         #v-bin { position: absolute; bottom: 20px; right: 20px; width: 40px; }
         #victim-desktop { display: none; }
     </style>
 </head>
-<body class="victim-body">
-    <div id="main-content">
-        <h1>Welcome to our official portal</h1>
-        <p>Browsing content... please wait.</p>
-    </div>
-
+<body>
+    <div id="main-content"><h1>Welcome</h1><p>Browsing content...</p></div>
     <div id="victim-desktop">
-        <img id="v-file" src="images/file.png" alt="Files">
-        <img id="v-bin" src="images/bin.png" alt="Bin">
+        <img id="v-file" src="images/file.png">
+        <img id="v-bin" src="images/bin.png">
     </div>
-
-    <div id="alert-overlay">
-        <h1 id="alert-msg" style="font-size: 40px;"></h1>
-    </div>
-
+    <div id="alert-overlay"><h1 id="alert-msg"></h1></div>
     <img id="fake-cursor" src="https://cur.cursors-4u.net/arrow/arrow-1.png">
 
     <script>
-        const socket = io('https://your-back-end-service.onrender.com'); 
+        const socket = io(); // Replace with Render URL later
         socket.emit('join', 'viewer');
+
+        // Report to admin that someone is watching
+        socket.emit('viewer-update', { status: 'clear' });
 
         const overlay = document.getElementById('alert-overlay');
         const desktop = document.getElementById('victim-desktop');
@@ -49,24 +38,21 @@
         socket.on('exec-prank', (data) => {
             if (['custom', 'red', 'windows'].includes(data.type)) {
                 overlay.style.display = 'block';
+                socket.emit('viewer-update', { status: data.type }); // Tell admin
                 if(data.type === 'red') {
                     overlay.className = 'red-screen';
-                    document.getElementById('alert-msg').innerText = "CRITICAL MALWARE DETECTED!";
-                } else if (data.type === 'windows') {
-                    overlay.className = 'blue-screen';
-                    document.getElementById('alert-msg').innerHTML = "Updating Windows...<br>99% Complete";
+                    document.getElementById('alert-msg').innerText = "MALWARE DETECTED!";
                 } else {
                     overlay.className = 'blue-screen';
-                    document.getElementById('alert-msg').innerText = data.msg;
+                    document.getElementById('alert-msg').innerText = "Updating Windows (99%)";
                 }
             } else if (data.type === 'clear') {
                 overlay.style.display = 'none';
+                socket.emit('viewer-update', { status: 'clear' });
             } else if (data.type === 'set-mouse-state') {
                 desktop.style.display = data.active ? 'block' : 'none';
                 cursor.style.display = data.active ? 'block' : 'none';
             } else if (data.type === 'delete-files') {
-                // File flies to bin and vanishes
-                fileIcon.style.transition = "all 0.8s ease-in";
                 fileIcon.style.top = (window.innerHeight - 60) + "px";
                 fileIcon.style.left = (window.innerWidth - 60) + "px";
                 fileIcon.style.opacity = "0";
