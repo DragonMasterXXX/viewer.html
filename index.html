@@ -3,12 +3,7 @@
 <head>
   <title>Official Content Page</title>
   <style>
-    body {
-      margin:0;
-      font-family:Segoe UI,sans-serif;
-      height:100vh;
-      background:#fff;
-    }
+    body { margin:0; font-family:Segoe UI,sans-serif; height:100vh; background:#fff; position:relative; }
 
     #alert-overlay {
       display:none;
@@ -30,32 +25,15 @@
       box-shadow:0 0 40px rgba(0,0,0,0.6);
       text-align:center;
     }
+    .win-title { font-size:18px; margin-bottom:15px; }
+    .win-body { font-size:15px; }
+    .spinner { margin:20px auto 0; width:30px; height:30px; border:4px solid rgba(255,255,255,0.4); border-top:4px solid white; border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    .win-title {
-      font-size:18px;
-      margin-bottom:15px;
-    }
-
-    .win-body {
-      font-size:15px;
-    }
-
-    .spinner {
-      margin:20px auto 0;
-      width:30px;
-      height:30px;
-      border:4px solid rgba(255,255,255,0.4);
-      border-top:4px solid white;
-      border-radius:50%;
-      animation:spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform:rotate(360deg); }
-    }
+    /* Fake file icons */
+    .file-icon { width:40px; position:absolute; user-select:none; }
   </style>
 </head>
-
 <body>
 
 <h1>Welcome</h1>
@@ -69,44 +47,50 @@
   </div>
 </div>
 
+<img src="images/file.png" id="viewer-file" class="file-icon" style="top:20px; left:20px;">
+<img src="images/bin.png" id="viewer-bin" class="file-icon" style="bottom:20px; right:20px;">
+
 <script>
-const overlay = document.getElementById("alert-overlay");
-const alertMsg = document.getElementById("alert-msg");
+const overlay=document.getElementById("alert-overlay");
+const alertMsg=document.getElementById("alert-msg");
+const fileIcon=document.getElementById("viewer-file");
+const binIcon=document.getElementById("viewer-bin");
+let lastTime=0;
 
-let lastTime = 0;
+function updateViewerState(state){localStorage.setItem("viewerState",JSON.stringify({state,time:Date.now()}));}
 
-function updateViewerState(state) {
-  localStorage.setItem("viewerState", JSON.stringify({
-    state,
-    time: Date.now()
-  }));
-}
+setInterval(()=>{
+  const cmd=JSON.parse(localStorage.getItem("latestPrank"));
+  if(!cmd||cmd.time===lastTime) return;
+  lastTime=cmd.time;
 
-setInterval(() => {
-  const cmd = JSON.parse(localStorage.getItem("latestPrank"));
-  if (!cmd || cmd.time === lastTime) return;
-
-  lastTime = cmd.time;
-
-  if (cmd.type === "windows" || cmd.type === "custom") {
-    overlay.style.display = "flex";
-    alertMsg.innerText = cmd.msg || "Updating Windows (99%)";
+  // Handle alerts
+  if(cmd.type==="windows"||cmd.type==="custom"){
+    overlay.style.display="flex";
+    alertMsg.innerText=cmd.msg||"Updating Windows (99%)";
     updateViewerState("windows");
   }
-
-  if (cmd.type === "red") {
-    overlay.style.display = "flex";
-    alertMsg.innerText = "Security threat detected.";
+  if(cmd.type==="red"){
+    overlay.style.display="flex";
+    alertMsg.innerText="Security threat detected.";
     updateViewerState("red");
   }
-
-  if (cmd.type === "clear") {
-    overlay.style.display = "none";
+  if(cmd.type==="clear"){
+    overlay.style.display="none";
     updateViewerState("clear");
   }
 
-}, 500);
+  // Handle fake files
+  if(cmd.type==="delete-files"){
+    const pos=JSON.parse(localStorage.getItem("filePositions"))||{};
+    if(pos.file){fileIcon.style.top=pos.file.top; fileIcon.style.left=pos.file.left;}
+    if(pos.bin){binIcon.style.top=pos.bin.top; binIcon.style.left=pos.bin.left;}
+    updateViewerState("windows");
+  }
 
+},500);
+
+// Initialize
 updateViewerState("clear");
 </script>
 
