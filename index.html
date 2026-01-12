@@ -1,36 +1,80 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Official Content Page</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
-        body { margin: 0; padding: 20px; font-family: sans-serif; background: #fff; overflow: hidden; height: 100vh; }
-        #alert-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; text-align: center; padding-top: 25vh; }
-        .blue-screen { background: #0078d7; color: white; }
-        .red-screen { background: #aa0000; color: white; }
-        #fake-cursor { position: fixed; display: none; width: 22px; pointer-events: none; z-index: 10001; }
-        #v-file { position: absolute; top: 20px; left: 20px; width: 40px; transition: all 0.8s ease-in; }
-        #v-bin { position: absolute; bottom: 20px; right: 20px; width: 40px; }
-        #victim-desktop { display: none; }
-    </style>
+  <title>Official Content Page</title>
+  <style>
+    body {
+      margin:0;
+      font-family:Segoe UI,sans-serif;
+      height:100vh;
+      background:#fff;
+    }
+
+    #alert-overlay {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:#0078d7;
+      z-index:9999;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .windows-box {
+      background:#0078d7;
+      color:white;
+      width:420px;
+      padding:30px;
+      border-radius:4px;
+      box-shadow:0 0 40px rgba(0,0,0,0.6);
+      text-align:center;
+    }
+
+    .win-title {
+      font-size:18px;
+      margin-bottom:15px;
+    }
+
+    .win-body {
+      font-size:15px;
+    }
+
+    .spinner {
+      margin:20px auto 0;
+      width:30px;
+      height:30px;
+      border:4px solid rgba(255,255,255,0.4);
+      border-top:4px solid white;
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform:rotate(360deg); }
+    }
+  </style>
 </head>
+
 <body>
-    <div id="main-content"><h1>Welcome</h1><p>Browsing content...</p></div>
-    <div id="victim-desktop">
-        <img id="v-file" src="images/file.png">
-        <img id="v-bin" src="images/bin.png">
-    </div>
-    <div id="alert-overlay"><h1 id="alert-msg"></h1></div>
-    <img id="fake-cursor" src="https://cur.cursors-4u.net/arrow/arrow-1.png">
-    <script>
-const overlay = document.getElementById('alert-overlay');
-const desktop = document.getElementById('victim-desktop');
-const cursor = document.getElementById('fake-cursor');
-const fileIcon = document.getElementById('v-file');
 
-let lastCommandTime = 0;
+<h1>Welcome</h1>
+<p>Browsing content...</p>
 
-// Viewer reports status
+<div id="alert-overlay">
+  <div class="windows-box">
+    <div class="win-title">Windows System Message</div>
+    <div class="win-body" id="alert-msg"></div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<script>
+const overlay = document.getElementById("alert-overlay");
+const alertMsg = document.getElementById("alert-msg");
+
+let lastTime = 0;
+
 function updateViewerState(state) {
   localStorage.setItem("viewerState", JSON.stringify({
     state,
@@ -38,45 +82,33 @@ function updateViewerState(state) {
   }));
 }
 
-// Poll for admin commands
 setInterval(() => {
   const cmd = JSON.parse(localStorage.getItem("latestPrank"));
-  if (!cmd || cmd.time === lastCommandTime) return;
+  if (!cmd || cmd.time === lastTime) return;
 
-  lastCommandTime = cmd.time;
+  lastTime = cmd.time;
 
-  if (cmd.type === 'red') {
-    overlay.style.display = 'block';
-    overlay.className = 'red-screen';
-    document.getElementById('alert-msg').innerText = "MALWARE DETECTED!";
-    updateViewerState('red');
+  if (cmd.type === "windows" || cmd.type === "custom") {
+    overlay.style.display = "flex";
+    alertMsg.innerText = cmd.msg || "Updating Windows (99%)";
+    updateViewerState("windows");
+  }
 
-  } else if (cmd.type === 'windows') {
-    overlay.style.display = 'block';
-    overlay.className = 'blue-screen';
-    document.getElementById('alert-msg').innerText = "Updating Windows (99%)";
-    updateViewerState('windows');
+  if (cmd.type === "red") {
+    overlay.style.display = "flex";
+    alertMsg.innerText = "Security threat detected.";
+    updateViewerState("red");
+  }
 
-  } else if (cmd.type === 'clear') {
-    overlay.style.display = 'none';
-    updateViewerState('clear');
-
-  } else if (cmd.type === 'set-mouse-state') {
-    desktop.style.display = cmd.active ? 'block' : 'none';
-    cursor.style.display = cmd.active ? 'block' : 'none';
-    updateViewerState(cmd.active ? 'desktop' : 'clear');
-
-  } else if (cmd.type === 'delete-files') {
-    fileIcon.style.top = (window.innerHeight - 60) + "px";
-    fileIcon.style.left = (window.innerWidth - 60) + "px";
-    fileIcon.style.opacity = "0";
-    updateViewerState('red');
+  if (cmd.type === "clear") {
+    overlay.style.display = "none";
+    updateViewerState("clear");
   }
 
 }, 500);
 
-// Initial state
-updateViewerState('clear');
+updateViewerState("clear");
 </script>
+
 </body>
 </html>
